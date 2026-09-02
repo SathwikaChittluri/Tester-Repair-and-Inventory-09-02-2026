@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tester Repair &amp; Inventory Dashboard — 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fff;color:#1f2937;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}
+
+.header{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.header-title{font-size:18px;font-weight:700;color:#111827}
+.header-meta{font-size:12px;color:#6b7280}
+
+.hero{background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:16px 24px;display:flex;gap:32px;flex-wrap:wrap;align-items:center}
+.hero-stat{text-align:center}
+.hero-stat .big{font-size:28px;font-weight:800;color:#111827}
+.hero-stat .lbl{font-size:12px;color:#6b7280;margin-top:2px}
+
+.tabs{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 24px;display:flex;overflow-x:auto;position:sticky;top:53px;z-index:199}
+.tabs button{background:none;border:none;cursor:pointer;font-size:13px;color:#6b7280;padding:12px 16px;border-bottom:2px solid transparent;white-space:nowrap;font-family:inherit;transition:color .15s,border-color .15s}
+.tabs button:hover{color:#2563eb}
+.tabs button.active{color:#2563eb;border-bottom-color:#2563eb;font-weight:600}
+
+.panel{display:none;padding:24px;max-width:1360px;margin:0 auto}
+.panel.active{display:block}
+
+h2{font-size:16px;font-weight:700;color:#111827;margin:24px 0 14px;padding-bottom:8px;border-bottom:1px solid #e5e7eb}
+h2:first-child{margin-top:0}
+h3{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+
+.kpi-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.kpi{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 18px;min-width:150px;flex:1;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.kpi .num{font-size:26px;font-weight:800;color:#111827;line-height:1.1}
+.kpi .lbl{font-size:12px;color:#6b7280;margin-top:4px}
+.kpi .sub{font-size:11px;color:#9ca3af;margin-top:4px}
+.kpi.green .num{color:#16a34a}.kpi.green{border-left:3px solid #16a34a}
+.kpi.red .num{color:#dc2626}.kpi.red{border-left:3px solid #dc2626}
+.kpi.yellow .num{color:#d97706}.kpi.yellow{border-left:3px solid #d97706}
+.kpi.blue .num{color:#2563eb}.kpi.blue{border-left:3px solid #2563eb}
+.kpi.purple .num{color:#7c3aed}.kpi.purple{border-left:3px solid #7c3aed}
+
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;margin-bottom:20px}
+.chart-box{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.chart-box canvas{max-height:230px}
+.wide{grid-column:1/-1}
+
+.tbl-wrap{overflow-x:auto;margin-bottom:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f9fafb;color:#6b7280;font-size:11px;font-weight:600;padding:9px 12px;text-align:left;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px}
+td{padding:9px 12px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+td strong{color:#111827}
+tr.total-row td{background:#f9fafb;font-weight:700;color:#111827}
+tr.hl td{background:#eff6ff}
+
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:9999px}
+.b-green{background:#dcfce7;color:#16a34a}
+.b-red{background:#fee2e2;color:#dc2626}
+.b-yellow{background:#fef3c7;color:#d97706}
+.b-blue{background:#dbeafe;color:#2563eb}
+.b-purple{background:#ede9fe;color:#7c3aed}
+.b-gray{background:#f3f4f6;color:#6b7280}
+
+.fleet-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:8px}
+.fleet-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#6b7280;margin-bottom:16px}
+.fleet-legend span{display:flex;align-items:center;gap:5px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+.tl{border-left:2px solid #e5e7eb;margin-left:8px;padding-left:20px}
+.tl-item{position:relative;margin-bottom:14px}
+.tl-item::before{content:'';position:absolute;left:-26px;top:5px;width:10px;height:10px;border-radius:50%;background:#e5e7eb;border:2px solid #9ca3af}
+.tl-item.done::before{background:#16a34a;border-color:#16a34a}
+.tl-item.active::before{background:#2563eb;border-color:#2563eb}
+.tl-date{font-size:11px;color:#9ca3af;margin-bottom:2px}
+.tl-text{font-size:13px;color:#374151}
+
+.s-track{color:#16a34a;font-weight:600}
+.s-behind{color:#dc2626;font-weight:600}
+.s-pend{color:#9ca3af}
+
+.notice{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#1d4ed8}
+.notice strong{color:#1e40af}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Tester Repair &amp; Inventory Dashboard — 2026</div>
+  <div class="header-meta">1,474 repair records &nbsp;·&nbsp; Fleet Sep 2, 2026 &nbsp;·&nbsp; <strong style="color:#2563eb">Updated Sep 2, 2026</strong></div>
+</div>
+
+<div class="hero">
+  <div class="hero-stat"><div class="big">1,474</div><div class="lbl">Total repair records</div></div>
+  <div class="hero-stat"><div class="big">1,288</div><div class="lbl">2026 repairs</div></div>
+  <div class="hero-stat"><div class="big" style="color:#16a34a">80</div><div class="lbl">Good (Sep 2)</div></div>
+  <div class="hero-stat"><div class="big" style="color:#dc2626">60</div><div class="lbl">Bad (Sep 2)</div></div>
+  <div class="hero-stat"><div class="big">140</div><div class="lbl">UT2.0 fleet</div></div>
+  <div class="hero-stat"><div class="big">Sep 2, 2026</div><div class="lbl">Last updated</div></div>
+</div>
+
+<div class="tabs">
+  <button class="active" onclick="show('fleet',this)">Fleet Status</button>
+  <button onclick="show('overview',this)">Overview</button>
+  <button onclick="show('parts',this)">Part Usage</button>
+  <button onclick="show('forecast',this)">Forecast &amp; Gap</button>
+  <button onclick="show('model',this)">By Model / Shift</button>
+  <button onclick="show('detail',this)">Repair Detail</button>
+  <button onclick="show('bonepile',this)">Bonepile</button>
+  <button onclick="show('recovery',this)">Recovery Plan</button>
+</div>
+
+<!-- ══════════════ FLEET STATUS ══════════════ -->
+<div id="fleet" class="panel active">
+  <h2>Fleet Status — Sep 2, 2026</h2>
+
+  <div class="fleet-bar">
+    <div style="background:#16a34a;width:57.1%" title="Good: 80"></div>
+    <div style="background:#dc2626;width:36.4%" title="WIP Bad: 51"></div>
+    <div style="background:#d97706;width:5.7%"  title="ENG Bad: 8"></div>
+    <div style="background:#9ca3af;width:0.7%"  title="WUR Bad: 1"></div>
+  </div>
+  <div class="fleet-legend">
+    <span><span class="dot" style="background:#16a34a"></span>Good: 80 (57%)</span>
+    <span><span class="dot" style="background:#dc2626"></span>WIP Bad: 51 (36%)</span>
+    <span><span class="dot" style="background:#d97706"></span>ENG Bad: 8 (6%)</span>
+    <span><span class="dot" style="background:#9ca3af"></span>WUR Bad: 1 (1%)</span>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi green"><div class="num">80</div><div class="lbl">Good / In Use</div><div class="sub">57% of fleet</div></div>
+    <div class="kpi red"><div class="num">60</div><div class="lbl">Bad / Down</div><div class="sub">43% of fleet</div></div>
+    <div class="kpi red"><div class="num">51</div><div class="lbl">WIP (Bad)</div><div class="sub">32× 6U &nbsp;+&nbsp; 19× 6U EXT</div></div>
+    <div class="kpi yellow"><div class="num">8</div><div class="lbl">ENG (Bad)</div><div class="sub">4× 6U EXT — engineering hold</div></div>
+    <div class="kpi"><div class="num">1</div><div class="lbl">WUR (Bad)</div><div class="sub">1× 6U EXT only</div></div>
+    <div class="kpi green"><div class="num">51</div><div class="lbl">WUR (Good)</div><div class="sub">12×6U · 25×6U EXT · 13×4U · 1×OC</div></div>
+    <div class="kpi green"><div class="num">25</div><div class="lbl">SBR (Good)</div><div class="sub">Sled-based racks</div></div>
+    <div class="kpi"><div class="num">0</div><div class="lbl">S400 Ready</div><div class="sub">Pending S400 construction</div></div>
+  </div>
+
+  <h2>Fleet Breakdown by Department — Sep 2, 2026</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Dept</th>
+          <th style="color:#16a34a">Good</th>
+          <th style="color:#dc2626">Bad</th>
+          <th>6U Good</th><th>6U Bad</th>
+          <th>6U EXT Good</th><th>6U EXT Bad</th>
+          <th>4U Good</th><th>4U Bad</th>
+          <th>Open Chassis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>WUR</strong></td><td style="color:#16a34a;font-weight:700">51</td><td style="color:#dc2626;font-weight:700">1</td><td>12</td><td>0</td><td>25</td><td>1</td><td>13</td><td>0</td><td>1G</td></tr>
+        <tr><td><strong>SBR</strong></td><td style="color:#16a34a;font-weight:700">25</td><td style="color:#dc2626;font-weight:700">0</td><td colspan="8" style="color:#9ca3af;font-style:italic">Vulcan / B200 / B300 / Viking / OC sled-based racks</td></tr>
+        <tr><td><strong>WIP</strong></td><td style="color:#16a34a;font-weight:700">0</td><td style="color:#dc2626;font-weight:700">51</td><td>0</td><td>32</td><td>0</td><td>19</td><td>0</td><td>0</td><td>—</td></tr>
+        <tr><td><strong>ENG</strong></td><td style="color:#16a34a;font-weight:700">4</td><td style="color:#dc2626;font-weight:700">8</td><td>0</td><td>0</td><td>4</td><td>8</td><td>0</td><td>0</td><td>—</td></tr>
+        <tr><td><strong>S400</strong></td><td style="color:#16a34a;font-weight:700">0</td><td style="color:#dc2626;font-weight:700">0</td><td colspan="8" style="color:#9ca3af">Pending room construction</td></tr>
+        <tr class="total-row"><td>Total</td><td style="color:#16a34a">80</td><td style="color:#dc2626">60</td><td colspan="8">Fleet total: 140</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box"><h3>Fleet Good vs. Bad Trend (Aug 21 – Sep 1)</h3><canvas id="fleetTrendChart"></canvas></div>
+    <div class="chart-box"><h3>Bad Tester Breakdown by Dept (Sep 1)</h3><canvas id="badBreakChart"></canvas></div>
+    <div class="chart-box wide"><h3>Good vs. Bad by Department (Sep 1)</h3><canvas id="badDeptChart"></canvas></div>
+  </div>
+
+  <h2>Tester Receiving History</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Batch</th><th>Approx. Time</th><th>Qty</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Initial</td><td>Q4 2023</td><td>53</td><td>Originally 55; 2 transferred to WSC</td></tr>
+        <tr><td>4U (harvest → enabled)</td><td>~Q2 2025</td><td>30</td><td>Received for parts harvest; enabled due to demand</td></tr>
+        <tr><td>Asia batch (in WIP)</td><td>Q2 2026</td><td>35</td><td>Currently in WIP</td></tr>
+        <tr><td>MX batch</td><td>Q2 2026</td><td>20</td><td>4 in use; 2 CID; 14 expected good (passed inspection)</td></tr>
+        <tr><td>Miscellaneous</td><td>Unknown</td><td>2</td><td>Received for parts harvest</td></tr>
+        <tr class="total-row"><td>Total</td><td>—</td><td>140</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ OVERVIEW ══════════════ -->
+<div id="overview" class="panel">
+  <div class="notice">
+    <strong>Sep 2 update (latest):</strong> 15 new repair records added (all Completed) · Fleet: 80 Good / 60 Bad (Sep 2 evening update) · 1 aging unit pending IT resolution · 2 racks moved from S400 and being tested offline (8 units) · ~300 MCIO boards incoming · Target: 81 Good once IT resolves last unit, 110 Good by end of September
+  </div>
+
+  <h2>Repair Overview — Jan 1 – Sep 2, 2026</h2>
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="num">1,288</div><div class="lbl">Total Repairs (2026)</div><div class="sub">Jan 1 – Sep 2, 2026</div></div>
+    <div class="kpi green"><div class="num">1,253</div><div class="lbl">Completed</div><div class="sub">97.3% completion rate</div></div>
+    <div class="kpi yellow"><div class="num">20</div><div class="lbl">In Progress</div><div class="sub">Active repairs as of log date</div></div>
+    <div class="kpi red"><div class="num">11</div><div class="lbl">On Hold</div><div class="sub">Blocked / awaiting parts</div></div>
+    <div class="kpi"><div class="num">36.8</div><div class="lbl">Avg Weekly Volume</div><div class="sub">Repairs per week (2026)</div></div>
+    <div class="kpi"><div class="num">79</div><div class="lbl">Peak Week</div><div class="sub">Week of May 4</div></div>
+    <div class="kpi green"><div class="num">1,075</div><div class="lbl">Same-Day Repairs</div><div class="sub">83.5% resolved same day</div></div>
+    <div class="kpi yellow"><div class="num">56</div><div class="lbl">Repairs &gt; 7 Days</div><div class="sub">4.4% long-cycle repairs</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box wide"><h3>Weekly Repair Volume (Jan–Sep 2026)</h3><canvas id="weeklyChart"></canvas></div>
+    <div class="chart-box wide"><h3>Monthly Repair Volume (Jan–Sep 2026)</h3><canvas id="monthlyChart"></canvas></div>
+    <div class="chart-box"><h3>Repairs by Tester Model</h3><canvas id="modelDonut"></canvas></div>
+    <div class="chart-box"><h3>Repair vs. Replace — Monthly Trend</h3><canvas id="repReplChart"></canvas></div>
+    <div class="chart-box"><h3>Repair Status Breakdown</h3><canvas id="statusDonut"></canvas></div>
+    <div class="chart-box"><h3>Repair Turnaround Time Distribution</h3><canvas id="turnaroundOverview"></canvas></div>
+  </div>
+</div>
+
+<!-- ══════════════ PART USAGE ══════════════ -->
+<div id="parts" class="panel">
+  <h2>Part Usage &amp; Inventory</h2>
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="num">Saver Board</div><div class="lbl">#1 Part Used (2026)</div><div class="sub">531 used YTD · ↑4 since Aug 31</div></div>
+    <div class="kpi blue"><div class="num">15.3</div><div class="lbl">Avg Weekly Saver Board</div><div class="sub">Per week in 2026</div></div>
+    <div class="kpi yellow"><div class="num">30</div><div class="lbl">Switchboard Stock</div><div class="sub">As of Sep 1</div></div>
+    <div class="kpi red"><div class="num">0</div><div class="lbl">MCIO Cable Stock</div><div class="sub">Depleted Jul 17 · ~300 units incoming (in transit Sep 2)</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box wide"><h3>All-Time Part Consumption (1,474 records)</h3><canvas id="partsBar"></canvas></div>
+    <div class="chart-box wide"><h3>Monthly Consumption Trend — Top 6 Parts</h3><canvas id="partsMonthly"></canvas></div>
+    <div class="chart-box"><h3>Inventory Drawdown — Jul 10 → Sep 1, 2026</h3><canvas id="invDraw"></canvas></div>
+    <div class="chart-box"><h3>Current Stock Levels (Sep 1, 2026)</h3><canvas id="stockBar"></canvas></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Part</th><th>Stock</th><th>Trend</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Saver Board</td><td>~59</td><td>63 on Aug 28 · −4 consumed Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>Switchboard</td><td>30</td><td>As of Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>6U EXT Kit (w/o DIMM)</td><td>26</td><td>As of Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>6U EXT DIMM</td><td>1,056</td><td>As of Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>Interposer Board</td><td>140</td><td>As of Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>PSU 3000W DELTA</td><td>~63</td><td>64 on Aug 28 · −1 consumed Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>CPU Tray</td><td>~20</td><td>21 on Aug 28 · −1 consumed Sep 1 · 2× AMD ROME CPUs validated PASS</td><td><span class="badge b-yellow">Monitor</span></td></tr>
+        <tr><td>Fanboard</td><td>~9</td><td>10 on Aug 28 · −1 consumed Sep 1</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>Vulcan Sled</td><td>45</td><td>Stable</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>Umbriel B200 Sled</td><td>63</td><td>↑ Restocked (4 → 63)</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>Umbriel B300 Sled</td><td>18</td><td>Stable</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>UT2.0 EX 1.2KW PDB Board</td><td>54</td><td>↑ Restocked (13 → 54)</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>UT2.0 Luna Respin Board</td><td>27</td><td>Stable</td><td><span class="badge b-green">Adequate</span></td></tr>
+        <tr><td>SlimSas Cable</td><td>4</td><td>↓ from 5</td><td><span class="badge b-yellow">Monitor</span></td></tr>
+        <tr><td>Latches L</td><td>10</td><td>Stable</td><td><span class="badge b-yellow">Monitor</span></td></tr>
+        <tr><td>Latches R</td><td>10</td><td>Stable</td><td><span class="badge b-yellow">Monitor</span></td></tr>
+        <tr><td>Rails L</td><td>2</td><td>Near depleted</td><td><span class="badge b-red">Critical</span></td></tr>
+        <tr><td>Rails R</td><td>2</td><td>Near depleted</td><td><span class="badge b-red">Critical</span></td></tr>
+        <tr><td>Fan</td><td>0</td><td>Depleted since Jul 10</td><td><span class="badge b-red">Out of stock</span></td></tr>
+        <tr><td>MCIO Cables</td><td>0</td><td>Depleted Jul 17</td><td><span class="badge b-red">Out of stock</span></td></tr>
+        <tr><td>DUT Fanboard</td><td>3</td><td>Stable</td><td><span class="badge b-yellow">Monitor</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ FORECAST ══════════════ -->
+<div id="forecast" class="panel">
+  <h2>Forecasted Demand vs. Current Stock</h2>
+  <div class="kpi-row">
+    <div class="kpi red"><div class="num">66</div><div class="lbl">Saver Board 30d demand</div><div class="sub">Stock ~59 · Gap: −7</div></div>
+    <div class="kpi green"><div class="num">15</div><div class="lbl">CPU Tray 30d demand</div><div class="sub">Stock ~20 · Surplus: +5</div></div>
+    <div class="kpi red"><div class="num">8</div><div class="lbl">Rails 30d demand</div><div class="sub">Stock 4 · Gap: −4</div></div>
+    <div class="kpi red"><div class="num">3</div><div class="lbl">Fans 30d demand</div><div class="sub">Stock 0 · Gap: −3</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box wide"><h3>Forecasted Demand — 30 / 60 / 90 Days</h3><canvas id="forecastBar"></canvas></div>
+    <div class="chart-box"><h3>Stock vs. 30-Day Demand</h3><canvas id="stock30Bar"></canvas></div>
+    <div class="chart-box"><h3>30d / 90d Gap by Part</h3><canvas id="gapBar"></canvas></div>
+  </div>
+
+  <p style="font-size:12px;color:#6b7280;margin-bottom:10px">Based on average weekly consumption from repair log (Jan–Sep 2026).</p>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Part</th><th>Stock</th><th>Wkly Rate</th><th>30d</th><th>60d</th><th>90d</th><th>30d Gap</th><th>90d Gap</th></tr></thead>
+      <tbody>
+        <tr><td>Saver Board</td><td>~59</td><td>15.3</td><td>66</td><td>132</td><td>198</td><td><span class="badge b-red">−7</span></td><td><span class="badge b-red">−139</span></td></tr>
+        <tr><td>CPU Tray</td><td>~20</td><td>3.5</td><td>15</td><td>30</td><td>45</td><td><span class="badge b-green">+5</span></td><td><span class="badge b-red">−25</span></td></tr>
+        <tr><td>PSU</td><td>~63</td><td>3.3</td><td>14</td><td>28</td><td>43</td><td><span class="badge b-green">+49</span></td><td><span class="badge b-green">+20</span></td></tr>
+        <tr><td>Switchboard</td><td>30</td><td>1.0</td><td>4</td><td>9</td><td>13</td><td><span class="badge b-green">+26</span></td><td><span class="badge b-green">+17</span></td></tr>
+        <tr><td>Rails (L+R)</td><td>4</td><td>1.8</td><td>8</td><td>15</td><td>23</td><td><span class="badge b-red">−4</span></td><td><span class="badge b-red">−19</span></td></tr>
+        <tr><td>MCIO Cables</td><td>0</td><td>0.6</td><td>2</td><td>5</td><td>8</td><td><span class="badge b-red">−2</span></td><td><span class="badge b-red">−8</span></td></tr>
+        <tr><td>Fans</td><td>0</td><td>0.4</td><td>2</td><td>3</td><td>5</td><td><span class="badge b-red">−2</span></td><td><span class="badge b-red">−5</span></td></tr>
+        <tr><td>Chassis</td><td>0</td><td>1.3</td><td>6</td><td>11</td><td>17</td><td><span class="badge b-red">−6</span></td><td><span class="badge b-red">−17</span></td></tr>
+        <tr><td>Latches (L+R)</td><td>20</td><td>1.0</td><td>4</td><td>9</td><td>13</td><td><span class="badge b-green">+16</span></td><td><span class="badge b-green">+7</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ BY MODEL / SHIFT ══════════════ -->
+<div id="model" class="panel">
+  <h2>Repairs by Model &amp; Shift</h2>
+  <div class="kpi-row">
+    <div class="kpi blue"><div class="num">992</div><div class="lbl">1st Shift Repairs</div><div class="sub">77.0% of shift-recorded repairs</div></div>
+    <div class="kpi purple"><div class="num">27</div><div class="lbl">2nd Shift Repairs</div><div class="sub">2.1% of shift-recorded repairs</div></div>
+    <div class="kpi yellow"><div class="num">17</div><div class="lbl">3rd Shift Repairs</div><div class="sub">1.3% of shift-recorded repairs</div></div>
+    <div class="kpi"><div class="num">252</div><div class="lbl">Not Recorded / Other</div><div class="sub">Weekend, poweroff, cross-shift</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box"><h3>Repairs by Shift</h3><canvas id="shiftDonut"></canvas></div>
+    <div class="chart-box"><h3>Top Parts by Shift (1st Shift)</h3><canvas id="shift1Parts"></canvas></div>
+    <div class="chart-box wide"><h3>Repairs by Model and Shift</h3><canvas id="modelShift"></canvas></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>1st</th><th>2nd</th><th>3rd</th><th>Cross / Other</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr><td>UT2.0 6U EXT</td><td>412</td><td>11</td><td>14</td><td>69</td><td><strong>506</strong></td></tr>
+        <tr><td>UT2.0 6U</td><td>224</td><td>8</td><td>2</td><td>148</td><td><strong>382</strong></td></tr>
+        <tr><td>UT2.0 4U EXT</td><td>225</td><td>1</td><td>1</td><td>8</td><td><strong>235</strong></td></tr>
+        <tr><td>UT1.0 Delta</td><td>44</td><td>2</td><td>0</td><td>3</td><td><strong>49</strong></td></tr>
+        <tr><td>Portwell Gen 5</td><td>27</td><td>2</td><td>0</td><td>0</td><td><strong>29</strong></td></tr>
+        <tr><td>Portwell Gen 3</td><td>16</td><td>0</td><td>0</td><td>0</td><td><strong>16</strong></td></tr>
+        <tr><td>Viking H100</td><td>12</td><td>1</td><td>0</td><td>3</td><td><strong>16</strong></td></tr>
+        <tr><td>UT2.0 Scout</td><td>12</td><td>0</td><td>0</td><td>0</td><td><strong>12</strong></td></tr>
+        <tr><td>UT1.0 Redstone</td><td>11</td><td>0</td><td>0</td><td>0</td><td><strong>11</strong></td></tr>
+        <tr><td>Other / Not recorded</td><td>9</td><td>2</td><td>0</td><td>21</td><td><strong>32</strong></td></tr>
+        <tr class="total-row"><td>Total</td><td>992</td><td>27</td><td>17</td><td>252</td><td><strong>1,288</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box"><h3>Top Parts — UT2.0 6U EXT</h3><canvas id="top6UEXT"></canvas></div>
+    <div class="chart-box"><h3>Top Parts — UT2.0 6U</h3><canvas id="top6U"></canvas></div>
+    <div class="chart-box"><h3>Top Parts — UT2.0 4U EXT</h3><canvas id="top4U"></canvas></div>
+  </div>
+</div>
+
+<!-- ══════════════ REPAIR DETAIL ══════════════ -->
+<div id="detail" class="panel">
+  <h2>Repair Detail Analysis</h2>
+  <div class="kpi-row">
+    <div class="kpi green"><div class="num">817</div><div class="lbl">Repaired</div><div class="sub">63.4% of 2026 repairs</div></div>
+    <div class="kpi blue"><div class="num">463</div><div class="lbl">Replaced</div><div class="sub">35.9% of 2026 repairs</div></div>
+    <div class="kpi purple"><div class="num">531</div><div class="lbl">Saver Boards Used</div><div class="sub">#1 part · 41.3% of all repairs</div></div>
+    <div class="kpi yellow"><div class="num">427</div><div class="lbl">Top Symptom Count</div><div class="sub">Connector damage / poor workmanship</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box"><h3>Repair vs. Replace by Model</h3><canvas id="repReplModel"></canvas></div>
+    <div class="chart-box"><h3>Top 15 Symptoms / Remarks</h3><canvas id="sympChart"></canvas></div>
+    <div class="chart-box"><h3>Repair Turnaround Time Distribution</h3><canvas id="turnaround"></canvas></div>
+    <div class="chart-box"><h3>Repair vs. Replace — Monthly</h3><canvas id="actionMonthly"></canvas></div>
+  </div>
+
+  <h3>Top 15 Locations by Repair Count</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Location</th><th>Repairs</th><th>Share</th></tr></thead>
+      <tbody>
+        <tr><td>4A</td><td>30</td><td>2.3%</td></tr>
+        <tr><td>38A</td><td>30</td><td>2.3%</td></tr>
+        <tr><td>16A</td><td>27</td><td>2.1%</td></tr>
+        <tr><td>42A</td><td>26</td><td>2.0%</td></tr>
+        <tr><td>38B</td><td>26</td><td>2.0%</td></tr>
+        <tr><td>16B</td><td>26</td><td>2.0%</td></tr>
+        <tr><td>44A</td><td>26</td><td>2.0%</td></tr>
+        <tr><td>35A</td><td>25</td><td>1.9%</td></tr>
+        <tr><td>8B</td><td>24</td><td>1.9%</td></tr>
+        <tr><td>34A</td><td>24</td><td>1.9%</td></tr>
+        <tr><td>1B</td><td>23</td><td>1.8%</td></tr>
+        <tr><td>47B</td><td>22</td><td>1.7%</td></tr>
+        <tr><td>38C</td><td>21</td><td>1.6%</td></tr>
+        <tr><td>36A</td><td>21</td><td>1.6%</td></tr>
+        <tr><td>36D</td><td>21</td><td>1.6%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:20px">Open / In-Progress Repairs</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Location</th><th>Model</th><th>Part</th><th>Status</th><th>Date Logged</th></tr></thead>
+      <tbody>
+        <tr><td>41B</td><td>Viking H100</td><td>Firmware</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 9</td></tr>
+        <tr><td>16B</td><td>UT2.0 6U EXT</td><td>MCIO Cables</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 11</td></tr>
+        <tr><td>16B</td><td>UT2.0 6U EXT</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 11</td></tr>
+        <tr><td>36D</td><td>UT2.0 6U EXT</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 12</td></tr>
+        <tr><td>37D</td><td>UT2.0 6U</td><td>Fans</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 14</td></tr>
+        <tr><td>34C</td><td>UT2.0 6U EXT</td><td>Switchboard</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 17</td></tr>
+        <tr><td>37D</td><td>UT2.0 6U EXT</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 17</td></tr>
+        <tr><td>39B</td><td>UT2.0 6U</td><td>PSU Tray</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 17</td></tr>
+        <tr><td>41C</td><td>Viking H100</td><td>PDB Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 29</td></tr>
+        <tr><td>34A</td><td>UT2.0 6U EXT</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Jul 30</td></tr>
+        <tr><td>16C</td><td>UT2.0 6U EXT</td><td>Firmware</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 3</td></tr>
+        <tr><td>8B</td><td>UT2.0 6U EXT</td><td>Switchboard</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 3</td></tr>
+        <tr><td>34D</td><td>UT2.0 6U EXT</td><td>Lan Cable</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 3</td></tr>
+        <tr><td>36D</td><td>UT2.0 6U EXT</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 3</td></tr>
+        <tr><td>38D</td><td>UT2.0 6U</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 4</td></tr>
+        <tr><td>45A</td><td>UT2.0 6U EXT</td><td>Saver Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 4</td></tr>
+        <tr><td>16A</td><td>UT2.0 6U EXT</td><td>Switchboard</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 14</td></tr>
+        <tr><td>34C</td><td>UT2.0 6U EXT</td><td>Switchboard</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 14</td></tr>
+        <tr><td>43D</td><td>UT2.0 6U</td><td>Fan Board</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 24</td></tr>
+        <tr><td>16B</td><td>UT2.0 6U</td><td>BMC Version</td><td><span class="badge b-yellow">In Progress</span></td><td>Aug 28</td></tr>
+        <tr><td>33D</td><td>UT2.0 6U EXT</td><td>CPU Tray</td><td><span class="badge b-red">On Hold</span></td><td>Jul 1</td></tr>
+        <tr><td>33D</td><td>UT2.0 6U EXT</td><td>Lan Cable</td><td><span class="badge b-red">On Hold</span></td><td>Jul 1</td></tr>
+        <tr><td>15A</td><td>UT2.0 6U</td><td>Rails</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15A</td><td>UT2.0 6U</td><td>Latches</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15B</td><td>UT2.0 6U</td><td>Rails</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15B</td><td>UT2.0 6U</td><td>Latches</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15C</td><td>UT2.0 6U</td><td>Rails</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15C</td><td>UT2.0 6U</td><td>Latches</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15D</td><td>UT2.0 6U</td><td>Rails</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>15D</td><td>UT2.0 6U</td><td>Latches</td><td><span class="badge b-red">On Hold</span></td><td>Jul 9</td></tr>
+        <tr><td>46A</td><td>UT2.0 4U EXT</td><td>DIMMs</td><td><span class="badge b-red">On Hold</span></td><td>Jul 10</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ BONEPILE ══════════════ -->
+<div id="bonepile" class="panel">
+  <h2>Bonepile &amp; Blocked Units</h2>
+  <div class="notice">WIP contains 51 bad units (32× 6U, 19× 6U EXT). Parts supply is sufficient — technician capacity is the primary constraint. S400 room compliance work ongoing; operations redirected to S300.</div>
+  <div class="kpi-row">
+    <div class="kpi red"><div class="num">51</div><div class="lbl">WIP Bad</div><div class="sub">32× 6U + 19× 6U EXT</div></div>
+    <div class="kpi red"><div class="num">8</div><div class="lbl">ENG Bad</div><div class="sub">4× 6U EXT — engineering hold</div></div>
+    <div class="kpi red"><div class="num">2</div><div class="lbl">WUR Bad</div><div class="sub">1× 6U + 1× 6U EXT</div></div>
+    <div class="kpi yellow"><div class="num">0</div><div class="lbl">Chassis in stock</div><div class="sub">PN# 591.07J01.0003 · Lead time 142 days</div></div>
+  </div>
+
+  <h2>Aged / Bonepile Unit Detail</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Serial #</th><th>Model</th><th>Status</th><th>Issue / Remark</th></tr></thead>
+      <tbody>
+        <tr><td>1660424103060</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>CPU Tray Issue</td></tr>
+        <tr><td>1664723103004</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>—</td></tr>
+        <tr><td>1664423101023</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Needs Chassis, Switchboard</td></tr>
+        <tr><td>1661723101019</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Needs Chassis, Bad CPU Tray</td></tr>
+        <tr><td>1660925106086</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660324103070</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1662424103083</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660925106079</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660224103128</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660925106099</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660524103050</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660925106066</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1664323103002</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660925106098</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1664323103007</td><td>UT 2.0 6u</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660925106069</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+        <tr><td>1660925106101</td><td>UT 2.0 6u EXT</td><td><span class="badge b-red">Bonepile</span></td><td>Chassis needs SaverBoard Tray, PSU rework, EXT upgrade</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Parts Required to Clear Bonepile</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Part</th><th>Need</th><th>Stock</th><th>Gap</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>Rails L</td><td>8</td><td>2</td><td><span class="badge b-red">−6</span></td><td>Order immediately</td></tr>
+        <tr><td>Rails R</td><td>8</td><td>2</td><td><span class="badge b-red">−6</span></td><td>Order immediately</td></tr>
+        <tr><td>Chassis 6U EXT (PN# 591.07J01.0003)</td><td>13</td><td>0</td><td><span class="badge b-red">−13</span></td><td>Lead time 142 days — escalate urgently</td></tr>
+        <tr><td>Latches L</td><td>8</td><td>10</td><td><span class="badge b-green">+2</span></td><td>Available — will deplete stock</td></tr>
+        <tr><td>Latches R</td><td>8</td><td>10</td><td><span class="badge b-green">+2</span></td><td>Available — will deplete stock</td></tr>
+        <tr><td>Switchboard</td><td>1</td><td>30</td><td><span class="badge b-green">+29</span></td><td>Available</td></tr>
+        <tr><td>CPU Tray</td><td>1 set</td><td>~20</td><td><span class="badge b-green">+19</span></td><td>Available · 2× AMD ROME CPUs validated PASS Sep 1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════ RECOVERY PLAN ══════════════ -->
+<div id="recovery" class="panel">
+  <h2>Tester Recovery Plan</h2>
+  <div class="kpi-row">
+    <div class="kpi yellow"><div class="num">11</div><div class="lbl">Aging Backlog (Aug 21)</div><div class="sub">70 total bad on Aug 24</div></div>
+    <div class="kpi green"><div class="num">10</div><div class="lbl">Recovered</div><div class="sub">Down to 1 remaining as of Sep 1</div></div>
+    <div class="kpi red"><div class="num">1</div><div class="lbl">Remaining</div><div class="sub">1 aging unit still open</div></div>
+    <div class="kpi green"><div class="num">81</div><div class="lbl">Good Target (This Week)</div><div class="sub">1 unit pending IT resolution</div></div>
+    <div class="kpi blue"><div class="num">110</div><div class="lbl">Good Target (End of Sep)</div><div class="sub">Sep 21 milestone commitment</div></div>
+    <div class="kpi green"><div class="num">2</div><div class="lbl">AMD ROME CPUs</div><div class="sub">Validated PASS Sep 1</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box"><h3>Daily Recovery Progress</h3><canvas id="dailyRecov"></canvas></div>
+    <div class="chart-box"><h3>Cumulative Recovery (Aging Units)</h3><canvas id="cumulRecov"></canvas></div>
+    <div class="chart-box"><h3>Projected Good Tester Count</h3><canvas id="projActive"></canvas></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Day</th><th>Date</th><th>Planned / Actual</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Day 1</td><td>Aug 24</td><td>P:2 / A:3</td><td><span class="s-track">On Track</span></td><td>Recovery schedule initiated for 11 units by Aug 31</td></tr>
+        <tr><td>Day 2</td><td>Aug 25</td><td>P:2 / A:2</td><td><span class="s-track">On Track</span></td><td>—</td></tr>
+        <tr><td>Day 3</td><td>Aug 26</td><td>P:2 / A:1</td><td><span class="s-behind">Behind</span></td><td>Parts supply confirmed sufficient; technician capacity is constraint</td></tr>
+        <tr><td>Day 4</td><td>Aug 27</td><td>P:2 / A:0</td><td><span class="s-behind">Behind</span></td><td>124 CPUs fully received at facility; revised report issued</td></tr>
+        <tr><td>Day 5</td><td>Aug 28</td><td>P:2 / A:2</td><td><span class="s-track">On Track</span></td><td>9 confirmed recovered + 2 in verification; 110 Good committed by Sep 21</td></tr>
+        <tr><td>Day 6</td><td>Aug 31</td><td>P:1 / A:1</td><td><span class="s-track">On Track</span></td><td>62 Bad · CPU DIAG running on 2× AMD ROME CPUs</td></tr>
+        <tr class="hl"><td>Day 7</td><td>Sep 1</td><td>P:0 / A:1</td><td><span class="badge b-green">Updated ✓</span></td><td>Down to 1 remaining of 11 aging · 61 Bad · 2× CPUs PASS · 15 repairs logged</td></tr>
+        <tr class="hl"><td>Day 8</td><td>Sep 2</td><td>P:0 / A:—</td><td><span class="badge b-blue">Today</span></td><td>1 aging unit still pending IT resolution · 80 Good confirmed · 2 racks from S400 being tested offline (8 units) · ~300 MCIO boards incoming</td></tr>
+        <tr><td>Day 9</td><td>Sep 3</td><td>P:0 / A:—</td><td><span class="s-pend">Pending</span></td><td>—</td></tr>
+        <tr><td>Day 10</td><td>Sep 4</td><td>P:0 / A:—</td><td><span class="s-pend">Pending</span></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Aging WIP — Units Under Recovery</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Serial #</th><th>Loc</th><th>Status</th><th>Model</th><th>Est. Date</th><th>Parts Needed</th><th>Remark</th></tr></thead>
+      <tbody>
+        <tr><td>1660224103033</td><td>33D</td><td><span class="badge b-yellow">Wait for Repair</span></td><td>UT 2.0 6u EXT</td><td>Sep 1</td><td>—</td><td>Waiting for IT</td></tr>
+        <tr><td>45023200007</td><td>37A</td><td><span class="badge b-yellow">Wait for Repair</span></td><td>UT 2.0 6u</td><td>Aug 31</td><td>—</td><td>Testing</td></tr>
+        <tr><td>1942026106007</td><td>39B</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 6u</td><td>Aug 28</td><td>Chassis, CPU Tray, BIOS Chip</td><td>Needs Chassis, Bad CPU Tray</td></tr>
+        <tr><td>1665123103089</td><td>43D</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 6u EXT</td><td>Aug 28</td><td>CPU Tray, BIOS Chip</td><td>Won't power on</td></tr>
+        <tr><td>1662424103087</td><td>16A</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 6u EXT</td><td>Aug 25</td><td>CPU Tray, Switchboard, BIOS Chip</td><td>CPU Issue / won't power on</td></tr>
+        <tr><td>1942026106005</td><td>42D</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 4u EXT</td><td>Aug 25</td><td>Chassis (PN# 591.07J01.0003)</td><td>Both chassis pins bent</td></tr>
+        <tr><td>1952226106050</td><td>16C</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 6u EXT</td><td>Aug 24</td><td>Firmware</td><td>Flashing issues</td></tr>
+        <tr><td>1660925106075</td><td>34C</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 6u EXT</td><td>Aug 24</td><td>Switchboard, MCIO Cables</td><td>Bad switchboard / fails to power on</td></tr>
+        <tr><td>1660324103121</td><td>38C</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 4u EXT</td><td>Aug 24</td><td>Chassis</td><td>Broken Chassis</td></tr>
+        <tr><td>1952226106056</td><td>16B</td><td><span class="badge b-green">Recovered Sep 1 ✓</span></td><td>UT 2.0 6u</td><td>Sep 1</td><td>—</td><td>Saver Board Jig repaired</td></tr>
+        <tr><td>45023200008</td><td>39C</td><td><span class="badge b-blue">In Use</span></td><td>UT 2.0 6u</td><td>Aug 25</td><td>Chassis, BIOS Chip</td><td>Won't power on, testing</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>S400 Commissioning Timeline</h2>
+  <div class="tl">
+    <div class="tl-item done"><div class="tl-date">Aug 20</div><div class="tl-text"><strong>Incident</strong> — S400 compliance issue (no fire deterrent); operations shut down. Testers redirected to S300.</div></div>
+    <div class="tl-item done"><div class="tl-date">Aug 21–31</div><div class="tl-text"><strong>Done</strong> — Recovery of 11 aging testers. 9 confirmed + 2 in verification by Aug 31. 62 Bad.</div></div>
+    <div class="tl-item done"><div class="tl-date">Sep 1</div><div class="tl-text"><strong>Done</strong> — 1 additional aging unit recovered · Down to 1 remaining · 61 Bad · 2× AMD ROME CPUs validated PASS · 15 repair records logged</div></div>
+    <div class="tl-item active"><div class="tl-date">Sep 1–18</div><div class="tl-text"><strong>Active</strong> — Rack moves, validation, and tester builds ongoing. Target: 81 Good by midweek. CPU validation logs under review Sep 2.</div></div>
+    <div class="tl-item"><div class="tl-date">Sep 21</div><div class="tl-text"><strong>Milestone</strong> — S300 Full Utilization + 110 Good testers target (pushed from Sep 11 due to B300 commit delay)</div></div>
+    <div class="tl-item"><div class="tl-date">Sep 22 – Oct 9</div><div class="tl-text"><strong>Pending</strong> — Gap period: tester builds complete but S400 room not yet finished</div></div>
+    <div class="tl-item"><div class="tl-date">Oct 9</div><div class="tl-text"><strong>Milestone</strong> — Tentative final day of S400 construction</div></div>
+    <div class="tl-item"><div class="tl-date">Oct 10–13</div><div class="tl-text"><strong>Pending</strong> — Rack insertion to S400</div></div>
+    <div class="tl-item"><div class="tl-date">Oct 14</div><div class="tl-text"><strong>Milestone</strong> — Tentative final inspection</div></div>
+    <div class="tl-item"><div class="tl-date">Oct 21</div><div class="tl-text"><strong>Milestone</strong> — 110U Ready (final 17 commissioned after S400 completion)</div></div>
+  </div>
+</div>
+
+<script>
+function show(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+Chart.defaults.font.family="'Segoe UI',system-ui,sans-serif";
+Chart.defaults.font.size=12;
+Chart.defaults.color='#6b7280';
+const GR={color:'#f3f4f6',borderDash:[3,3]};
+const mk=(id,cfg)=>new Chart(document.getElementById(id),cfg);
+const BL='#2563eb',GN='#16a34a',RD='#dc2626',YL='#d97706',PU='#7c3aed',OR='#ea580c';
+const PAL=[BL,GN,RD,YL,PU,OR,'#0891b2','#be185d'];
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep*'];
+const MV=[69,103,152,181,199,154,199,216,15];
+
+// ── FLEET ──
+mk('fleetTrendChart',{type:'line',data:{
+  labels:['Aug 21','Aug 24','Aug 28','Aug 31','Sep 1','Sep 2'],
+  datasets:[
+    {label:'Good',data:[70,70,72,79,79,80],borderColor:GN,backgroundColor:GN+'18',tension:.3,fill:true,pointRadius:5},
+    {label:'Bad', data:[70,70,68,62,61,60],borderColor:RD,backgroundColor:RD+'18',tension:.3,fill:true,pointRadius:5}
+  ]
+},options:{responsive:true,scales:{x:{grid:GR},y:{grid:GR,min:55,max:90,ticks:{stepSize:5}}},plugins:{legend:{position:'top'}}}});
+
+mk('badBreakChart',{type:'doughnut',data:{
+  labels:['WIP Bad (51)','ENG Bad (8)','WUR Bad (2)'],
+  datasets:[{data:[51,8,2],backgroundColor:[RD,YL,'#9ca3af'],borderWidth:2,borderColor:'#fff'}]
+},options:{responsive:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
+
+mk('badDeptChart',{type:'bar',data:{
+  labels:['WUR','SBR','ENG','WIP'],
+  datasets:[
+    {label:'Good',data:[51,25,4,0],backgroundColor:GN+'88',borderRadius:3},
+    {label:'Bad', data:[1,0,8,51],backgroundColor:RD+'88',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+// ── OVERVIEW ──
+mk('weeklyChart',{type:'bar',data:{
+  labels:['W1-Jan','W2','W3','W4','W1-Feb','W2','W3','W4','W1-Mar','W2','W3','W4','W1-Apr','W2','W3','W4','W1-May','W2','W3','W4','W1-Jun','W2','W3','W4','W1-Jul','W2','W3','W4','W1-Aug','W2','W3','W4','Sep1'],
+  datasets:[{label:'Repairs',
+    data:[18,17,19,15,22,25,28,28,35,38,40,39,42,45,47,47,79,48,40,32,38,36,40,40,50,48,51,50,55,53,58,50,15],
+    backgroundColor:(ctx)=>ctx.dataIndex===32?BL:BL+'55',
+    borderColor:(ctx)=>ctx.dataIndex===32?BL:BL+'88',
+    borderWidth:1,borderRadius:3}]
+},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR,ticks:{maxRotation:45,font:{size:10}}},y:{grid:GR}}}});
+
+mk('monthlyChart',{type:'bar',data:{labels:MO,datasets:[{label:'Repairs',data:MV,
+  backgroundColor:MV.map((_,i)=>i===8?BL:BL+'55'),
+  borderColor:MV.map((_,i)=>i===8?BL:BL+'88'),
+  borderWidth:1,borderRadius:4}]
+},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:GR}}}});
+
+mk('modelDonut',{type:'doughnut',data:{
+  labels:['UT2.0 6U EXT (506)','UT2.0 6U (382)','UT2.0 4U EXT (235)','UT1.0 Delta (49)','Portwell Gen 5 (29)','Viking H100 (16)','Other (71)'],
+  datasets:[{data:[506,382,235,49,29,16,71],backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]
+},options:{responsive:true,plugins:{legend:{position:'right',labels:{boxWidth:12,font:{size:11}}}}}});
+
+mk('repReplChart',{type:'bar',data:{labels:MO.slice(0,8),datasets:[
+  {label:'Repair', data:[45,68,100,115,130,98,128,133],backgroundColor:GN+'77',borderColor:GN,borderWidth:1,borderRadius:3},
+  {label:'Replace',data:[24,35,52,66,69,56,71,83], backgroundColor:BL+'77',borderColor:BL,borderWidth:1,borderRadius:3}
+]},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+mk('statusDonut',{type:'doughnut',data:{
+  labels:['Completed (1,253)','In Progress (20)','On Hold (11)'],
+  datasets:[{data:[1253,20,11],backgroundColor:[GN,YL,RD],borderWidth:2,borderColor:'#fff'}]
+},options:{responsive:true,plugins:{legend:{position:'right',labels:{boxWidth:12}}}}});
+
+mk('turnaroundOverview',{type:'bar',data:{
+  labels:['Same day','1 day','2–3 days','4–7 days','8–14 days','15–30 days','>30 days'],
+  datasets:[{label:'Repairs',data:[1075,77,39,29,39,16,10],
+    backgroundColor:[GN+'77',BL+'77',BL+'55',YL+'77',YL+'55',RD+'55',RD+'77'],borderRadius:3}]
+},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:GR}}}});
+
+// ── PARTS ──
+mk('partsBar',{type:'bar',data:{
+  labels:['Saver Board','CPU Tray','PSU','Rails','Chassis','rPDU','Saver Board Jig','Riser Card','Firmware','Latches','Switchboard','MCIO Cables','Interposer Board','PSU Tray','Network'],
+  datasets:[{label:'Count',data:[531,124,117,62,47,44,41,38,35,35,33,20,18,18,17],backgroundColor:BL+'44',borderColor:BL,borderWidth:1,borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+
+mk('partsMonthly',{type:'line',data:{labels:MO.slice(0,8),datasets:[
+  {label:'Saver Board',data:[25,38,56,70,80,65,78,90],borderColor:BL,tension:.3,fill:false,pointRadius:3},
+  {label:'CPU Tray',  data:[8,12,18,20,22,16,18,20], borderColor:GN,tension:.3,fill:false,pointRadius:3},
+  {label:'PSU',       data:[7,10,15,18,20,14,17,18], borderColor:RD,tension:.3,fill:false,pointRadius:3},
+  {label:'Rails',     data:[4,6,8,10,10,8,10,8],     borderColor:YL,tension:.3,fill:false,pointRadius:3},
+  {label:'Chassis',   data:[2,4,5,6,8,6,8,10],       borderColor:PU,tension:.3,fill:false,pointRadius:3},
+  {label:'rPDU',      data:[3,5,6,8,9,6,7,8],        borderColor:OR,tension:.3,fill:false,pointRadius:3}
+]},options:{responsive:true,scales:{x:{grid:GR},y:{grid:GR}},plugins:{legend:{position:'top',labels:{boxWidth:12}}}}});
+
+mk('invDraw',{type:'line',data:{
+  labels:['Jul 10','Jul 17','Jul 24','Jul 31','Aug 7','Aug 14','Aug 21','Aug 28','Sep 1'],
+  datasets:[
+    {label:'Saver Board',  data:[110,100,90,82,91,75,91,63,59],borderColor:BL,tension:.3,fill:false,pointRadius:3},
+    {label:'Switchboard',  data:[45,40,38,36,33,32,31,30,30], borderColor:GN,tension:.3,fill:false,pointRadius:3},
+    {label:'MCIO Cables',  data:[8,0,0,0,0,0,0,0,0],           borderColor:RD,tension:.3,fill:false,pointRadius:3},
+    {label:'Rails (L+R)',  data:[20,18,14,10,8,6,5,4,4],       borderColor:YL,tension:.3,fill:false,pointRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:GR},y:{grid:GR,min:0}},plugins:{legend:{position:'top',labels:{boxWidth:12}}}}});
+
+mk('stockBar',{type:'bar',data:{
+  labels:['6U EXT DIMM','Interposer','PSU','Umbriel B200','PDB Board','Vulcan Sled','6U EXT Kit','Saver Board','Luna Board','Switchboard','Latches L','Latches R','CPU Tray','Fanboard','DUT Fanboard','SlimSas','Rails L','Rails R','Fan','MCIO Cables'],
+  datasets:[{label:'Stock',
+    data:[1056,140,63,63,54,45,26,59,27,30,10,10,20,9,3,4,2,2,0,0],
+    backgroundColor:(ctx)=>{const v=ctx.dataset.data[ctx.dataIndex];return v===0?RD+'66':v<=4?YL+'66':GN+'66'},
+    borderWidth:0,borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR,type:'logarithmic'},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+
+// ── FORECAST ──
+mk('forecastBar',{type:'bar',data:{
+  labels:['Saver Board','CPU Tray','PSU','Switchboard','Rails','MCIO','Fans','Chassis','Latches'],
+  datasets:[
+    {label:'30d',data:[66,15,14,4,8,2,2,6,4],backgroundColor:BL+'66',borderRadius:3},
+    {label:'60d',data:[132,30,28,9,15,5,3,11,9],backgroundColor:PU+'66',borderRadius:3},
+    {label:'90d',data:[198,45,43,13,23,8,5,17,13],backgroundColor:RD+'66',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+mk('stock30Bar',{type:'bar',data:{
+  labels:['Saver Bd','CPU Tray','PSU','Switchboard','Rails','MCIO','Fans','Chassis','Latches'],
+  datasets:[
+    {label:'Current Stock',data:[59,20,63,30,4,0,0,0,20],backgroundColor:BL+'66',borderRadius:3},
+    {label:'30d Demand',  data:[66,15,14,4,8,2,2,6,4],   backgroundColor:RD+'66',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+mk('gapBar',{type:'bar',data:{
+  labels:['Saver Bd','CPU Tray','Rails','MCIO','Fans','Chassis','Switchboard'],
+  datasets:[
+    {label:'30d Gap',data:[-7,5,-4,-2,-2,-6,26],backgroundColor:(ctx)=>ctx.raw<0?RD+'77':GN+'77',borderRadius:3},
+    {label:'90d Gap',data:[-139,-25,-19,-8,-5,-17,17],backgroundColor:(ctx)=>ctx.raw<0?RD+'44':GN+'44',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+// ── MODEL/SHIFT ──
+mk('shiftDonut',{type:'doughnut',data:{
+  labels:['1st Shift (992)','2nd Shift (27)','3rd Shift (17)','Cross/Other (252)'],
+  datasets:[{data:[992,27,17,252],backgroundColor:[BL,GN,PU,'#9ca3af'],borderWidth:2,borderColor:'#fff'}]
+},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11}}}}}});
+
+mk('shift1Parts',{type:'bar',data:{
+  labels:['Saver Board','CPU Tray','PSU','Rails','Chassis','rPDU','Saver Bd Jig','Latches'],
+  datasets:[{label:'1st Shift',data:[420,95,85,48,35,32,30,25],backgroundColor:BL+'55',borderColor:BL,borderWidth:1,borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR},y:{grid:{display:false}}}}});
+
+mk('modelShift',{type:'bar',data:{
+  labels:['UT2.0 6U EXT','UT2.0 6U','UT2.0 4U EXT','UT1.0 Delta','Portwell Gen5','Viking H100','Scout','Redstone'],
+  datasets:[
+    {label:'1st',        data:[412,224,225,44,27,12,12,11],backgroundColor:BL+'99',borderRadius:3},
+    {label:'2nd',        data:[11,8,1,2,2,1,0,0],           backgroundColor:GN+'99',borderRadius:3},
+    {label:'3rd',        data:[14,2,1,0,0,0,0,0],           backgroundColor:PU+'99',borderRadius:3},
+    {label:'Cross/Other',data:[69,148,8,3,0,3,0,0],         backgroundColor:'#9ca3af',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+mk('top6UEXT',{type:'bar',data:{
+  labels:['Saver Board','CPU Tray','PSU','rPDU','Chassis','Rails','Switchboard','MCIO Cables','Firmware','Latches'],
+  datasets:[{label:'Count',data:[220,48,42,20,18,24,15,12,12,14],backgroundColor:BL+'55',borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR},y:{grid:{display:false}}}}});
+
+mk('top6U',{type:'bar',data:{
+  labels:['Saver Board','CPU Tray','PSU','Chassis','Saver Bd Jig','Rails','Switchboard','rPDU','Fans','Latches'],
+  datasets:[{label:'Count',data:[180,42,40,20,18,16,12,14,10,10],backgroundColor:GN+'55',borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR},y:{grid:{display:false}}}}});
+
+mk('top4U',{type:'bar',data:{
+  labels:['Saver Board','CPU Tray','PSU','Rails','Latches','rPDU','MCIO Cables','Chassis','PSU Tray','Firmware'],
+  datasets:[{label:'Count',data:[108,28,30,18,16,8,7,8,8,8],backgroundColor:PU+'55',borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR},y:{grid:{display:false}}}}});
+
+// ── DETAIL ──
+mk('repReplModel',{type:'bar',data:{
+  labels:['UT2.0 6U EXT','UT2.0 6U','UT2.0 4U EXT','UT1.0 Delta','Portwell','Viking','Scout'],
+  datasets:[
+    {label:'Repair', data:[320,240,150,30,8,10,8],backgroundColor:GN+'77',borderRadius:3},
+    {label:'Replace',data:[186,142,85,19,21,6,4], backgroundColor:BL+'77',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+mk('sympChart',{type:'bar',data:{
+  labels:['Connector damage / poor workmanship','Unable to pass init','Repaired Left and Right (Rails)','All PSUs not turning on','2 PSUs not turning on','Insertion count maxed','Rails worn / replaced','Not powering on','3 PSUs not turning on','Chassis interposer damage','4 PSUs not turning on','Connector fried','Insertion count maxed (alt)','5 PSUs not turning on','New Latches and Rails'],
+  datasets:[{label:'Count',data:[427,63,57,46,28,27,17,15,14,14,13,10,9,8,8],backgroundColor:BL+'55',borderRadius:3}]
+},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:GR},y:{grid:{display:false},ticks:{font:{size:11}}}}}});
+
+mk('turnaround',{type:'bar',data:{
+  labels:['Same day','1 day','2–3 days','4–7 days','8–14 days','15–30 days','>30 days'],
+  datasets:[{label:'Repairs',data:[1075,77,39,29,39,16,10],
+    backgroundColor:[GN+'77',BL+'77',BL+'55',YL+'77',YL+'55',RD+'55',RD+'77'],borderRadius:3}]
+},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:GR}}}});
+
+mk('actionMonthly',{type:'bar',data:{labels:MO.slice(0,8),datasets:[
+  {label:'Repair', data:[45,68,100,115,130,98,128,133],backgroundColor:GN+'77',borderRadius:3},
+  {label:'Replace',data:[24,35,52,66,69,56,71,83], backgroundColor:BL+'77',borderRadius:3}
+]},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR}},plugins:{legend:{position:'top'}}}});
+
+// ── RECOVERY ──
+mk('dailyRecov',{type:'bar',data:{
+  labels:['Aug 24','Aug 25','Aug 26','Aug 27','Aug 28','Aug 31','Sep 1'],
+  datasets:[
+    {label:'Planned',data:[2,2,2,2,2,1,0],backgroundColor:BL+'55',borderRadius:3},
+    {label:'Actual', data:[3,2,1,0,2,1,1], backgroundColor:GN+'88',borderRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:{display:false}},y:{grid:GR,min:0,max:4,ticks:{stepSize:1}}},plugins:{legend:{position:'top'}}}});
+
+mk('cumulRecov',{type:'line',data:{
+  labels:['Aug 21','Aug 24','Aug 25','Aug 26','Aug 27','Aug 28','Aug 31','Sep 1'],
+  datasets:[
+    {label:'Planned',data:[0,2,4,6,8,10,11,11],borderColor:BL,borderDash:[5,5],tension:.2,fill:false,pointRadius:3},
+    {label:'Actual', data:[0,3,5,6,6,8,9,10],  borderColor:GN,tension:.2,fill:false,pointRadius:4}
+  ]
+},options:{responsive:true,scales:{x:{grid:GR},y:{grid:GR,min:0,max:12,ticks:{stepSize:2}}},plugins:{legend:{position:'top'}}}});
+
+mk('projActive',{type:'line',data:{
+  labels:['Aug 24','Aug 31','Sep 1','Sep midweek','Sep 21','Oct 21'],
+  datasets:[
+    {label:'Actual / Projected Good',data:[70,79,79,81,110,110],borderColor:GN,backgroundColor:GN+'18',tension:.3,fill:true,pointRadius:5},
+    {label:'Target',                  data:[70,81,81,81,110,110],borderColor:BL,borderDash:[5,5],tension:.3,fill:false,pointRadius:3}
+  ]
+},options:{responsive:true,scales:{x:{grid:GR},y:{grid:GR,min:65,max:120,ticks:{stepSize:10}}},plugins:{legend:{position:'top'}}}});
+</script>
+</body>
+</html>
